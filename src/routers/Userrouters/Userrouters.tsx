@@ -1,4 +1,4 @@
-import { FallbackLoading } from "components/Fallback/Fallback";
+import { Loading } from "components/Loading/Laoding";
 import { Suspense, lazy } from "react";
 import { Routes, Route } from "react-router-dom";
 import UserNotfound from "components/Notfound/NotFound";
@@ -9,11 +9,11 @@ const Userroute = () => {
     return (
         <Routes>
             <Route path="/" element={
-                <Suspense fallback={<FallbackLoading />}>
+                <Suspense fallback={<Loading />}>
                     <Login />
                 </Suspense>} />
             <Route path="/userlist" element={
-                <Suspense fallback={<FallbackLoading />}>
+                <Suspense fallback={<Loading />}>
                     <Userlist />
                 </Suspense>} />
             <Route path="*" element={<UserNotfound />} />

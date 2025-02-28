@@ -4,7 +4,7 @@ import { Row, Form, Input } from "antd";
 const RowSC = styled(Row)({
     width: "100%",
     height: "100%",
-    backgroundColor: "rgb(157, 157, 157)"
+    backgroundColor: "#DEDEDE"
 });
 
 const FormSC = styled(Form)({

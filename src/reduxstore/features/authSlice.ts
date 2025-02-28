@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import Toast from 'components/custom/Toast';
 import { LoginProps } from 'pages/User/Login/LoginInterface';
 import axiosInstance from 'services/AxiosInstance';
 
@@ -22,10 +23,16 @@ export const loginUser = createAsyncThunk(
     try {
       const response = await axiosInstance.post('api/login', credentials);
       const token = response.data.token;
-      localStorage.setItem('token', token);
-      localStorage.setItem('username', credentials.email);
-      return {token, email: credentials.email};
+      if (credentials.remember) {
+        localStorage.setItem('token', token);
+        localStorage.setItem('username', credentials.email);
+      } else {
+        sessionStorage.setItem('token', token);
+        sessionStorage.setItem('username', credentials.email);
+      }
+      return { token, email: credentials.email };
     } catch (error: any) {
+      Toast("error",error.response.data.message)
       return rejectWithValue(error.response.data.message);
     }
   }
@@ -41,6 +48,7 @@ const authSlice = createSlice({
     logout: (state) => {
       state.token = null;
       localStorage.removeItem('token');
+      localStorage.removeItem('username');
     },
   },
   extraReducers: (builder) => {

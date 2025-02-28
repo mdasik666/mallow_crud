@@ -17,7 +17,7 @@ const Login: React.FC = () => {
     const { token, loading } = useAppSelector((state) => state.auth);
 
     useEffect(() => {
-        const savedToken = localStorage.getItem('token');
+        const savedToken = localStorage.getItem('token') || sessionStorage.getItem('token');
         if (savedToken) {
             dispatch(setToken(savedToken));
             nav("/userlist");
@@ -65,7 +65,7 @@ const Login: React.FC = () => {
                 >
                     <FormSC.Item<LoginProps>
                         name="email"
-                        rules={[{ required: true, message: 'Please input your username!' }]}>
+                        rules={[{ required: true, message: 'Please input your email!' }, { type: 'email', message: 'Please enter a valid email!' }]}>
                         <InputSC placeholder="Email" size="middle" variant="underlined" prefix={<UserOutlined />} />
                     </FormSC.Item>
 
@@ -82,7 +82,7 @@ const Login: React.FC = () => {
                     <FormSC.Item label={null}>
                         <Button type="primary" htmlType="submit" style={{ width: "100%", borderRadius: "0" }}
                             disabled={isDisabled}>
-                            {loading ? "Submitting..." : "Log in"}
+                            {loading ? "Logging in..." : "Log in"}
                         </Button>
                     </FormSC.Item>
                 </FormSC>

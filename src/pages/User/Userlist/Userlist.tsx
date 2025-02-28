@@ -1,23 +1,21 @@
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { logout } from "reduxstore/features/authSlice";
 import { useAppDispatch, useAppSelector } from "reduxstore/hooks";
-import { Flex, Layout, Table, Space, Input, Typography, Button, TableProps, Popconfirm, Pagination, Avatar, Card, Row, Col, Modal, Form } from "antd";
-import { DeleteOutlined, EditOutlined, LogoutOutlined, OrderedListOutlined, TableOutlined } from "@ant-design/icons";
+import { Flex, Layout, Space, Input, Typography, Button, TableProps, Popconfirm, Pagination, Avatar, Form } from "antd";
+import { LogoutOutlined, OrderedListOutlined, TableOutlined } from "@ant-design/icons";
 import { createUserData, deleteUserData, fetchUserList, updateUserData } from "reduxstore/features/userSlice";
 import { ColumnsType } from "antd/es/table";
+import { Loading } from "components/Loading/Laoding";
+import { UserListProps } from "./UserlistInterface";
+import CusromTable from "components/custom/Table";
+import CustomCard from "components/custom/Card";
+import CustomModal from "components/custom/Modal";
+import Toast from "components/custom/Toast";
 
 const { Header, Content } = Layout;
 const { Text, Title } = Typography;
 const { Search } = Input;
-
-interface UserList {
-    avatar: string;
-    email: string;
-    first_name: string;
-    id: number;
-    last_name: string;
-}
 
 const Userlist: React.FC = () => {
     const dispatch = useAppDispatch();
@@ -30,19 +28,19 @@ const Userlist: React.FC = () => {
     const { userdata } = useAppSelector((state) => state.users);
     const { data, per_page, total } = userdata;
     const [name, setUsername] = useState(username);
-    const [columns, setColumns] = useState<ColumnsType<UserList>>([]);
+    const [columns, setColumns] = useState<ColumnsType<UserListProps>>([]);
     const [hoveredCard, setHoveredCard] = useState<number | null>(null);
-    const [open, setOpen] = useState<{ open: boolean, type: string, id?: number }>();
+    const [open, setOpen] = useState<{ open: boolean, type: string, id?: number } | undefined>(undefined);
     const [form] = Form.useForm();
 
-
-    const handleEdit = useCallback((data: any) => {
+    const handleEdit = useCallback((data: UserListProps) => {
         form.setFieldsValue(data)
         setOpen({ open: true, type: "update", id: data.id })
     }, [form]);
 
     const handleDelete = useCallback((id: number) => {
         dispatch(deleteUserData(id))
+        Toast("success", "User deleted successfully");
     }, [dispatch]);
 
     const createColumn = useCallback(() => {
@@ -50,7 +48,7 @@ const Userlist: React.FC = () => {
             return [];
         }
 
-        const column: TableProps<UserList>['columns'] = Object.keys(data[0]).filter((key) => key !== 'id').map((key) => ({
+        const column: TableProps<UserListProps>['columns'] = Object.keys(data[0]).filter((key) => key !== 'id').map((key) => ({
             title: key === "avatar" ? "" : key.replace('_', ' ').toUpperCase(),
             dataIndex: key,
             key,
@@ -65,7 +63,7 @@ const Userlist: React.FC = () => {
         column.push({
             title: 'Actions',
             key: 'actions',
-            render: (_, record: UserList) => (
+            render: (_, record: UserListProps) => (
                 <Space align="center" size={"small"}>
                     <Button onClick={() => handleEdit(record)} type="primary" style={{ borderRadius: 0 }}>
                         Edit
@@ -91,7 +89,7 @@ const Userlist: React.FC = () => {
             nav("/");
         } else {
             dispatch(fetchUserList(pageNum));
-            setUsername(localStorage.getItem("username"));
+            setUsername(localStorage.getItem("username") || sessionStorage.getItem("username"));
             setLoadingState(false);
         }
     }, [dispatch, token, nav, pageNum]);
@@ -137,8 +135,10 @@ const Userlist: React.FC = () => {
                 console.log(open?.type, values);
                 if (open?.type === "create") {
                     dispatch(createUserData(values))
+                    Toast("success", "User created successfully");
                 } else {
                     dispatch(updateUserData({ data: values, id: open?.id }))
+                    Toast("success", "User updated successfully");
                 }
                 setOpen({ open: false, type: "" });
             })
@@ -160,7 +160,7 @@ const Userlist: React.FC = () => {
                     <LogoutOutlined onClick={logoutUser} style={{ fontSize: "20px", color: "white", padding: "5px", background: "red" }} />
                 </Space>
             </Header>
-            <Content style={{ width: "100%", height: "100%", background: "rgb(157, 157, 157)", padding: "4em" }}>
+            <Content style={{ width: "100%", height: "100%", background: "#DEDEDE", padding: "4em" }}>
                 <Layout style={{ width: "100%", height: "100%", background: "white", padding: "20px" }}>
                     <Flex justify="space-between" align="center">
                         <Title level={3}>Users</Title>
@@ -171,14 +171,15 @@ const Userlist: React.FC = () => {
                     </Flex>
                     <Space.Compact>
                         <Button
-                            variant="outlined"
+                            ghost={view !== 'card'}
                             type={view === 'table' ? 'primary' : 'default'}
                             icon={<TableOutlined />}
                             onClick={() => handleViewChange('table')}
                         >
                             Table
                         </Button>
-                        <Button variant="outlined"
+                        <Button
+                            ghost={view !== 'table'}
                             type={view === 'card' ? 'primary' : 'default'}
                             icon={<OrderedListOutlined />}
                             onClick={() => handleViewChange('card')}
@@ -187,66 +188,16 @@ const Userlist: React.FC = () => {
                         </Button>
                     </Space.Compact>
                     {view === 'table' ? (
-                        <Flex>
-                            <Table<UserList> columns={columns} dataSource={filteredData} pagination={false}
-                                scroll={{
-                                    x: "max-content",
-                                    y: 350,
-                                }}
-                                style={{ width: "100%", height: "100%" }}
-                            />
+                        <Flex style={{ width: "100%", height: "100%", overflow: "auto" }}>
+                            <Suspense fallback={<Loading />}>
+                                <CusromTable columns={columns} filteredData={filteredData} />
+                            </Suspense>
                         </Flex>
-
                     ) : (
-                        <Flex style={{ overflow: "hidden", padding: "20px" }} justify="center" align="center">
-                            <Row justify="center" gutter={[16, 16]}>
-                                {filteredData.map((user: any, idx: number) => (
-                                    <Col xs={24} sm={12} md={8} key={user.id}>
-                                        <Card
-                                            style={{ position: "relative", boxShadow: "0px 8px 8px rgba(0, 0, 0, 0.5)" }}
-                                            hoverable
-                                            onMouseEnter={() => setHoveredCard(user.id)}
-                                            onMouseLeave={() => setHoveredCard(null)}
-                                            cover={
-                                                <div style={{ display: 'flex', justifyContent: 'center', padding: '16px' }}>
-                                                    <Avatar src={user.avatar} size={80} />
-                                                </div>
-                                            }
-                                        >
-                                            {
-                                                hoveredCard === user.id && (
-                                                    <Flex justify="center" align="center" style={{
-                                                        position: "absolute",
-                                                        width: "100%",
-                                                        height: "100%",
-                                                        top: 0,
-                                                        left: 0,
-                                                        backgroundColor: "rgba(0, 0, 0, 0.5)",
-                                                        padding: "10px",
-                                                        borderRadius: "5px",
-                                                        gap: "10px",
-                                                        zIndex: 1,
-                                                    }}>
-                                                        <Button
-                                                            type="primary"
-                                                            icon={<EditOutlined />}
-                                                            onClick={() => handleEdit(user)}
-                                                        />
-                                                        <Popconfirm title="Sure to delete?" onConfirm={() => handleDelete(user.id)}>
-                                                            <Button
-                                                                type="primary"
-                                                                style={{ backgroundColor: "red" }}
-                                                                icon={<DeleteOutlined />}
-                                                            />
-                                                        </Popconfirm>
-                                                    </Flex>
-                                                )
-                                            }
-                                            <Card.Meta style={{ textAlign: "center" }} title={`${user.first_name} ${user.last_name}`} description={user.email} />
-                                        </Card>
-                                    </Col>
-                                ))}
-                            </Row>
+                        <Flex style={{ width: "100%", height: "100%", overflowY: "auto", padding: "20px" }} justify="center">
+                            <Suspense fallback={<Loading />}>
+                                <CustomCard filteredData={filteredData} setHoveredCard={setHoveredCard} hoveredCard={hoveredCard} handleEdit={handleEdit} handleDelete={handleDelete} />
+                            </Suspense>
                         </Flex>
                     )}
                 </Layout>
@@ -258,59 +209,7 @@ const Userlist: React.FC = () => {
                     onChange={onPageChange}
                 />
             </Content>
-
-            <Modal
-                open={open?.open}
-                title={open?.type === "create" ? "Create New User" : "Edit User"}
-                onOk={handleOk}
-                onCancel={handleCancel}
-                footer={[
-                    <Button style={{ borderRadius: 0 }} key="cancel" onClick={handleCancel}>
-                        Cancel
-                    </Button>,
-                    <Button style={{ borderRadius: 0 }} key="submit" type="primary" onClick={handleOk}>
-                        Submit
-                    </Button>,
-                ]}
-            >
-                <Form form={form} layout="vertical">
-                    <Form.Item
-                        label="First Name"
-                        name="first_name"
-                        rules={[{ required: true, message: "Please enter your first name!" }]}
-                    >
-                        <Input placeholder="Enter first name" />
-                    </Form.Item>
-
-                    <Form.Item
-                        label="Last Name"
-                        name="last_name"
-                        rules={[{ required: true, message: "Please enter your last name!" }]}
-                    >
-                        <Input placeholder="Enter last name" />
-                    </Form.Item>
-
-                    <Form.Item
-                        label="Email"
-                        name="email"
-                        rules={[
-                            { required: true, message: "Please enter your email!" },
-                            { type: "email", message: "Please enter a valid email!" },
-                        ]}
-                    >
-                        <Input placeholder="Enter email" />
-                    </Form.Item>
-
-                    <Form.Item
-                        label="Profile Image Link"
-                        name="avatar"
-                        rules={[{ required: true, message: "Please enter your profile image link!" }]}
-                    >
-                        <Input placeholder="Enter profile image URL" />
-                    </Form.Item>
-                </Form>
-            </Modal>
-
+            <CustomModal open={open} handleOk={handleOk} handleCancel={handleCancel} form={form} />
         </Layout>
     );
 };

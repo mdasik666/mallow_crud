@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import Toast from 'components/custom/Toast';
 import { RootState } from 'reduxstore/store';
 import axiosInstance from 'services/AxiosInstance';
 
@@ -35,12 +36,13 @@ const initialState: UserState = {
   loading: false,
   error: null,
 };
+
 type page = number;
 export const fetchUserList = createAsyncThunk(
   'api/users',
   async (page: page, { getState, rejectWithValue }) => {
     const state = getState() as RootState;
-    const token = state.auth.token || localStorage.getItem('token');
+    const token = state.auth.token || localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!token) {
       return rejectWithValue('No token found');
     }
@@ -60,6 +62,7 @@ export const createUserData = createAsyncThunk(
       const response = await axiosInstance.post(`api/users`, data);
       return response.data;
     } catch (error: any) {
+      Toast("error",error.response.data.message)
       return rejectWithValue(error.response?.data?.message || "Error deleting user");
     }
   }
@@ -74,6 +77,7 @@ export const updateUserData = createAsyncThunk(
       delete responseData.updatedAt
       return { ...responseData, id: data.id };
     } catch (error: any) {
+      Toast("error",error.response.data.message)
       return rejectWithValue(error.response?.data?.message || "Error deleting user");
     }
   }
@@ -86,6 +90,7 @@ export const deleteUserData = createAsyncThunk(
       await axiosInstance.delete(`api/users/${userId}`);
       return userId;
     } catch (error: any) {
+      Toast("error",error.response.data.message)
       return rejectWithValue(error.response?.data?.message || "Error deleting user");
     }
   }
